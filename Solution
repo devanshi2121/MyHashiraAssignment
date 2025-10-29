@@ -1,0 +1,64 @@
+import org.json.JSONObject;
+import java.io.FileReader;
+import java.util.Iterator;
+import java.math.BigInteger;
+
+public class SecretReconstruction {
+    public static void main(String[] args) {
+        try {
+            // Read the JSON file
+            FileReader reader = new FileReader("testcase1.json");
+            StringBuilder sb = new StringBuilder();
+            int i;
+            while ((i = reader.read()) != -1) sb.append((char) i);
+            reader.close();
+
+            // Parse JSON
+            JSONObject obj = new JSONObject(sb.toString());
+            JSONObject keys = obj.getJSONObject("keys");
+            int n = keys.getInt("n");
+            int k = keys.getInt("k");
+
+            // Arrays to hold x, y
+            BigInteger[] x = new BigInteger[k];
+            BigInteger[] y = new BigInteger[k];
+
+            // Collect first k pairs
+            int idx = 0;
+            for (Iterator<String> it = obj.keys(); it.hasNext(); ) {
+                String key = it.next();
+                if (key.equals("keys")) continue;
+                if (idx >= k) break;
+
+                JSONObject entry = obj.getJSONObject(key);
+                int base = Integer.parseInt(entry.getString("base"));
+                String value = entry.getString("value");
+
+                x[idx] = new BigInteger(key); // x = key
+                y[idx] = new BigInteger(value, base); // y = value in given base
+                idx++;
+            }
+
+            // Lagrange Interpolation to find f(0)
+            BigInteger secret = BigInteger.ZERO;
+            for (int j = 0; j < k; j++) {
+                BigInteger num = BigInteger.ONE;
+                BigInteger den = BigInteger.ONE;
+
+                for (int m = 0; m < k; m++) {
+                    if (m == j) continue;
+                    num = num.multiply(x[m].negate());
+                    den = den.multiply(x[j].subtract(x[m]));
+                }
+
+                BigInteger term = y[j].multiply(num).divide(den);
+                secret = secret.add(term);
+            }
+
+            System.out.println("Reconstructed Secret (constant term) = " + secret);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
